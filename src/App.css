@@ -19,6 +19,71 @@
   color: white;
 }
 
+.map-row {
+  flex-direction: row;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.map-container {
+  /* align-items: center;
+  justify-content: center; */
+  align-self: flex-start;
+  padding-left: 2vw;
+  margin-top: 2vh;
+  display: flex;
+  flex-grow: 1;
+  width: 70%;
+}
+
+.map-editor-container {
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin-top: 2vh;
+  margin-right: 2vh;
+  margin-left: 1vh;
+}
+
+.editor-container {
+  padding: 1vh;
+  /* display: flex;
+  flex-grow: 0.8 */
+}
+
+.bottom-space {
+  margin-bottom: 1vh;
+}
+
+.top-space {
+  margin-top: 1vh;
+}
+
+.vertical-space {
+  margin-bottom: 1vh;
+  margin-top: 1vh;
+}
+
+.show-add-new-marker {
+  display: block;
+  margin-left: 10px;
+}
+.hide-add-new-marker {
+  display: none;
+}
+.marker-label-section {
+  margin-left: 10px;
+}
+
+.edit-marker-section {
+  justify-content: space-evenly;
+  padding: 5px;
+}
+
 .App-link {
   color: #61dafb;
 }

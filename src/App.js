@@ -47,8 +47,11 @@ const styles = theme => ({
     marginRight: 5
   },
   addButton: {
+    marginTop: 10,
     marginBottom: 10,
-    marginTop: "4vh"
+    marginLeft: 9,
+    marginRight: 5,
+    padding: 5
   }
 });
 
@@ -207,7 +210,6 @@ function DenseAppBar(props) {
               }`}
             >
               <Divider />
-              <br />
               <Typography component="p">Add a new place to the map</Typography>
               <form>
                 <TextField
@@ -215,7 +217,7 @@ function DenseAppBar(props) {
                   label="Marker name"
                   className={classes.textField}
                   value={markerName}
-                  defaultValue="Marker name"
+                  helperText="enter a valid location"
                   onChange={handleChange("marker_name")}
                   margin="normal"
                   variant="outlined"
@@ -224,13 +226,12 @@ function DenseAppBar(props) {
                 <Button
                   variant="contained"
                   color="primary"
-                  className={classes.button}
+                  className={classes.addButton}
                 >
                   Add
                 </Button>
               </form>
             </div>
-            <br />
             <Divider />
             <Typography variant="h5" component="h3">
               Marker title
@@ -242,6 +243,7 @@ function DenseAppBar(props) {
                 label="Marker name"
                 className={classes.textField}
                 value={markerName}
+                helperText="change the marker title"
                 onChange={handleChange("marker_name")}
                 margin="normal"
                 variant="outlined"

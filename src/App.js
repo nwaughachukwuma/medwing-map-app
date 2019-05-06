@@ -15,7 +15,8 @@ import {
   GoogleMap,
   LoadScript,
   MarkerClusterer,
-  Marker
+  Marker,
+  OverlayView
 } from "@react-google-maps/api";
 import "./App.css";
 import { API_KEY } from "./utils/config";
@@ -32,7 +33,12 @@ function DenseAppBar(props) {
   const [query, setQuery] = useState("");
   const [coords, setCoords] = useState({});
   const [location, setLocation] = useState({});
-  let searchBox = null;
+  const [currentMarker, setCurrentMarker] = useState({
+    lat: null,
+    lng: null,
+    title: "Marker title",
+    index: null
+  });
 
   const toggleDrawer = open => {
     setDrawer(!drawer);
@@ -97,7 +103,7 @@ function DenseAppBar(props) {
       latLng.push(location);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
+  }, [location, latLng]);
 
   const computeGeoCoord = async () => {
     if (query.length < 3) {
@@ -111,8 +117,11 @@ function DenseAppBar(props) {
       )
         .then(response => response.json())
         .then(responseJson => {
-          const { location } = responseJson.results[0].geometry;
-          setLocation(location);
+          const {
+            formatted_address,
+            geometry: { location }
+          } = responseJson.results[0];
+          setLocation({ ...location, title: formatted_address });
           return location;
         })
         // throw new Error(error);
@@ -125,6 +134,25 @@ function DenseAppBar(props) {
   const addPlaceWithMarker = async e => {
     e.preventDefault();
     await computeGeoCoord();
+  };
+
+  const editPlaceWithMarker = async e => {
+    if (markerName.length < 3) {
+      alert("Enter a valid title for marker");
+      return null;
+    }
+    const { index } = currentMarker;
+    console.log(latLng, index);
+    latLng.splice(index, 1);
+    console.log(latLng);
+    await computeGeoCoord();
+    setCurrentMarker({ ...latLng[index], index });
+  };
+
+  const deletePlaceWithMarker = async e => {
+    const { index } = currentMarker;
+    latLng.splice(index, 1);
+    setCurrentMarker({ ...latLng[index], index: index > 0 ? index - 1 : 0 });
   };
 
   return (
@@ -181,6 +209,33 @@ function DenseAppBar(props) {
                 lng: parseFloat(coords.longitude)
               }}
             >
+              <OverlayView
+                position={{
+                  lat: parseFloat(currentMarker.lat),
+                  lng: parseFloat(currentMarker.lng)
+                }}
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <div
+                  style={{
+                    background: `white`,
+                    border: `1px solid #ccc`,
+                    padding: 15
+                  }}
+                >
+                  <Typography variant="h6" component="p">
+                    {currentMarker.lat
+                      ? currentMarker.title
+                      : "click on a marker"}
+                  </Typography>
+                  <Typography component="h5">
+                    {currentMarker.lat && `Lat: ${currentMarker.lat}`}
+                  </Typography>
+                  <Typography component="h5">
+                    {currentMarker.lng && `Lng: ${currentMarker.lng}`}
+                  </Typography>
+                </div>
+              </OverlayView>
               <MarkerClusterer
                 options={{
                   imagePath:
@@ -191,13 +246,16 @@ function DenseAppBar(props) {
                   latLng.map((location, i) => (
                     <Marker
                       clickable={true}
-                      title="marker title"
                       onClick={e => {
-                        // console.log('click: ', e)
+                        setCurrentMarker({ ...latLng[i], index: i });
                       }}
                       onLoad={marker => {
                         // console.log('marker: ', marker)
                       }}
+                      // onMouseOver={e => {
+                      //   setCurrentMarker( latLng[i] )
+                      // }}
+                      title={location.title}
                       key={i}
                       position={location}
                       clusterer={clusterer}
@@ -271,7 +329,7 @@ function DenseAppBar(props) {
             </Button>
             <Divider />
             <Typography variant="h5" component="h3">
-              Marker title
+              {currentMarker.title}
             </Typography>
 
             <form>
@@ -286,22 +344,23 @@ function DenseAppBar(props) {
                 variant="outlined"
               />
               <br />
-              <div className="marker-label-section ">
+              {/* <div className="marker-label-section ">
                 <label>Location: </label>
-                <label>marker title </label>
+                <label>{currentMarker.title} </label>
                 <br />
                 <label>Latitude: </label>
-                <label>Latitude </label>
+                <label>{currentMarker.lat} </label>
                 <br />
                 <label>Longitude: </label>
-                <label>Latitude </label>
-              </div>
-              <br />
+                <label>{currentMarker.lng} </label>
+              </div> */}
+              {/* <br /> */}
               <span className="edit-marker-section">
                 <Button
                   variant="contained"
                   color="primary"
                   className={classes.button}
+                  onClick={editPlaceWithMarker}
                 >
                   Edit
                 </Button>
@@ -310,6 +369,7 @@ function DenseAppBar(props) {
                   variant="contained"
                   color="primary"
                   className={classes.button}
+                  onClick={deletePlaceWithMarker}
                 >
                   Delete
                 </Button>

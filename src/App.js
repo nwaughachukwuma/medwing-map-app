@@ -25,6 +25,13 @@ import { SideList } from "./utils/navigation";
 import { styles } from "./plugins/material-ui/styles";
 import Swal from "sweetalert2";
 
+const delta = 0.0922;
+let viewportheight = 1024;
+if (typeof window.innerWidth !== "undefined") {
+  // viewportwidth = window.innerWidth;
+  viewportheight = window.innerHeight;
+}
+
 export class MapHome extends Component {
   constructor(props) {
     super(props);
@@ -110,9 +117,9 @@ export class MapHome extends Component {
   componentDidUpdate(prevProps, prevState) {
     if (prevProps !== this.props) {
       if (prevState.places !== this.state.places) {
-        this.setState(prevState => ({
-          places: [...prevState.places, this.state.location]
-        }));
+        // this.setState(prevState => ({
+        //   places: [...prevState.places, this.state.location]
+        // }));
       }
     }
   }
@@ -144,7 +151,6 @@ export class MapHome extends Component {
               ...prevState.coords,
               ...location
             },
-            location: markerPoint,
             places: [...prevState.places, markerPoint]
           }));
           return markerPoint;
@@ -175,32 +181,42 @@ export class MapHome extends Component {
   };
 
   editPlaceWithMarker = async e => {
-    const { index } = this.state.currentMarker;
-    if (!index) {
+    const {
+      markerName,
+      currentMarker: { index, lat, lng }
+    } = this.state;
+    if (!index && !(lat || lng)) {
       Swal.fire({
         type: "warning",
         title: "Oops!",
         text: "Click on a marker before editing..."
       });
-      return;
+      return null;
     }
-    if (this.state.markerName.length < 3) {
+    if (markerName.length < 3) {
       Swal.fire({
         type: "warning",
         title: "Oops!",
-        text: "Enter a valid title for marker..."
+        text: "Enter a valid edit title for place..."
       });
       return null;
     }
-    this.state.places.splice(index, 1);
+
+    let places = Object.assign([], this.state.places);
+    places.splice(index, 1);
+    await this.setState({ query: markerName, places: places, addPlace: false });
     this.computeGeoCoord().then(result =>
-      this.setState({ currentMarker: { ...result, index: index } })
+      this.setState({
+        currentMarker: { ...result, index: index }
+      })
     );
   };
 
   deletePlaceWithMarker = async e => {
-    const { index } = this.state.currentMarker;
-    if (!index) {
+    const {
+      currentMarker: { index, lat, lng }
+    } = this.state;
+    if (!index && !(lat || lng)) {
       Swal.fire({
         type: "warning",
         title: "Oops!",
@@ -211,13 +227,13 @@ export class MapHome extends Component {
     let places = Object.assign([], this.state.places);
     // this.state.places.splice(index, 1);
     places.splice(index, 1);
-    this.setState(prevState => ({
+    this.setState({
       currentMarker: {
-        ...prevState.places[index],
-        index: index > 0 ? index - 1 : 0
+        ...places[places.length ? places.length - 1 : 0],
+        index: places.length ? places.length - 1 : 0
       },
       places: places
-    }));
+    });
   };
 
   render() {
@@ -296,8 +312,8 @@ export class MapHome extends Component {
               >
                 <OverlayView
                   position={{
-                    lat: parseFloat(currentMarker.lat),
-                    lng: parseFloat(currentMarker.lng)
+                    lat: parseFloat(currentMarker.lat) + delta,
+                    lng: parseFloat(currentMarker.lng) + delta / viewportheight
                   }}
                   mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                 >
@@ -305,19 +321,15 @@ export class MapHome extends Component {
                     style={{
                       background: `white`,
                       border: `1px solid #ccc`,
-                      padding: 15
+                      padding: 15,
+                      marginLeft: 10,
+                      marginTop: 20
                     }}
                   >
-                    <Typography variant="h6" component="p">
+                    <Typography component="p">
                       {currentMarker.lat
                         ? currentMarker.title
                         : "click on a marker"}
-                    </Typography>
-                    <Typography component="h5">
-                      {currentMarker.lat && `Lat: ${currentMarker.lat}`}
-                    </Typography>
-                    <Typography component="h5">
-                      {currentMarker.lng && `Lng: ${currentMarker.lng}`}
                     </Typography>
                   </div>
                 </OverlayView>
@@ -438,17 +450,14 @@ export class MapHome extends Component {
                   variant="outlined"
                 />
                 <br />
-                {/* <div className="marker-label-section ">
-                  <label>Location: </label>
-                  <label>{currentMarker.title} </label>
-                  <br />
+                <div className="marker-label-section ">
                   <label>Latitude: </label>
-                  <label>{currentMarker.lat} </label>
+                  <label>{currentMarker.lat && currentMarker.lat}</label>
                   <br />
                   <label>Longitude: </label>
-                  <label>{currentMarker.lng} </label>
-                </div> */}
-                {/* <br /> */}
+                  <label>{currentMarker.lng && currentMarker.lng} </label>
+                </div>
+                <br />
                 <span className="edit-marker-section">
                   <Button
                     variant="contained"

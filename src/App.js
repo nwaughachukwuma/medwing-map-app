@@ -23,6 +23,7 @@ import { API_KEY } from "./utils/config";
 import { latLng } from "./utils/mock";
 import { SideList } from "./utils/navigation";
 import { styles } from "./plugins/material-ui/styles";
+import Swal from "sweetalert2";
 
 function DenseAppBar(props) {
   const { classes } = props;
@@ -39,6 +40,7 @@ function DenseAppBar(props) {
     title: "Marker title",
     index: null
   });
+  const [places, setPlaces] = useState(latLng);
 
   const toggleDrawer = open => {
     setDrawer(!drawer);
@@ -93,21 +95,36 @@ function DenseAppBar(props) {
             })
           )
           .catch(_ =>
-            alert("GPS service down!, Cannot get your location at this time")
+            Swal.fire({
+              type: "warning",
+              title: "GPS service down!",
+              text: "Cannot get your location at this time"
+            })
           );
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
     );
-    // update location
-    if (Object.keys(location).length) {
-      latLng.push(location);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, latLng]);
+  }, []);
+
+  useEffect(() => {
+    // update location
+    if (Object.keys(location).length) setPlaces([...places, location]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]);
+
+  useEffect(() => {
+    setCoords(coords);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMarker, places]);
 
   const computeGeoCoord = async () => {
     if (query.length < 3) {
-      alert("Enter a valid location");
+      Swal.fire({
+        type: "warning",
+        title: "Oops!",
+        text: "Enter a valid location..."
+      });
       return null;
     }
     const new_query = query.replace(/\s/g, "+");
@@ -121,38 +138,65 @@ function DenseAppBar(props) {
             formatted_address,
             geometry: { location }
           } = responseJson.results[0];
+          setCoords({ ...coords, ...location });
           setLocation({ ...location, title: formatted_address });
-          return location;
+          return { ...location, title: formatted_address };
         })
         // throw new Error(error);
         .catch(error => Promise.reject(error));
     } catch (error) {
-      console.log(error.message);
+      Swal.fire({
+        type: "warning",
+        title: "Oops!",
+        text:
+          "Status: The request did not encounter any error but returned no result"
+      });
     }
   };
 
   const addPlaceWithMarker = async e => {
     e.preventDefault();
-    await computeGeoCoord();
+    computeGeoCoord().then(result =>
+      setCurrentMarker({ ...result, index: places.length })
+    );
   };
 
   const editPlaceWithMarker = async e => {
+    const { index } = currentMarker;
+    if (!index) {
+      Swal.fire({
+        type: "warning",
+        title: "Oops!",
+        text: "Click on a marker before editing..."
+      });
+      return;
+    }
     if (markerName.length < 3) {
-      alert("Enter a valid title for marker");
+      Swal.fire({
+        type: "warning",
+        title: "Oops!",
+        text: "Enter a valid title for marker..."
+      });
       return null;
     }
-    const { index } = currentMarker;
-    console.log(latLng, index);
-    latLng.splice(index, 1);
-    console.log(latLng);
-    await computeGeoCoord();
-    setCurrentMarker({ ...latLng[index], index });
+    places.splice(index, 1);
+    computeGeoCoord().then(result =>
+      setCurrentMarker({ ...result, index: index })
+    );
   };
 
   const deletePlaceWithMarker = async e => {
     const { index } = currentMarker;
-    latLng.splice(index, 1);
-    setCurrentMarker({ ...latLng[index], index: index > 0 ? index - 1 : 0 });
+    if (!index) {
+      Swal.fire({
+        type: "warning",
+        title: "Oops!",
+        text: "Click on a marker before deleting..."
+      });
+      return;
+    }
+    places.splice(index, 1);
+    setCurrentMarker({ ...places[index], index: index > 0 ? index - 1 : 0 });
   };
 
   return (
@@ -175,7 +219,6 @@ function DenseAppBar(props) {
       <Drawer anchor="left" open={drawer} onClose={() => setDrawer(false)}>
         <div tabIndex={0} role="button">
           <SideList classes={classes} />
-          {/* {sideList} */}
         </div>
       </Drawer>
 
@@ -183,11 +226,11 @@ function DenseAppBar(props) {
         <div className="map-container">
           <LoadScript id="script-loader" googleMapsApiKey={API_KEY}>
             <GoogleMap
-              id="circle-example"
-              // onLoad={map => {
-              //   const bounds = new window.google.maps.LatLngBounds();
-              //   map.fitBounds(bounds);
-              // }}
+              id="map-component"
+              onLoad={map => {
+                // const bounds = new window.google.maps.LatLngBounds();
+                // map.fitBounds(bounds);
+              }}
               onUnmount={map => {
                 // do your stuff before map is unmounted
               }}
@@ -199,6 +242,7 @@ function DenseAppBar(props) {
               clickableIcons={true}
               onClick={e => {
                 // console.log("map clicked:", e, coords);
+                setCoords({ ...coords, ...currentMarker });
               }}
               onDragEnd={() => {
                 console.log("map dragged");
@@ -243,21 +287,21 @@ function DenseAppBar(props) {
                 }}
               >
                 {clusterer =>
-                  latLng.map((location, i) => (
+                  places.map((location, i) => (
                     <Marker
                       clickable={true}
-                      onClick={e => {
-                        setCurrentMarker({ ...latLng[i], index: i });
+                      onClick={_ => {
+                        setCoords({ ...coords, ...places[i] });
+                        setCurrentMarker({ ...places[i], index: i });
                       }}
                       onLoad={marker => {
                         // console.log('marker: ', marker)
                       }}
                       // onMouseOver={e => {
-                      //   setCurrentMarker( latLng[i] )
                       // }}
                       title={location.title}
                       key={i}
-                      position={location}
+                      position={{ lat: location.lat, lng: location.lng }}
                       clusterer={clusterer}
                     />
                   ))
@@ -289,8 +333,9 @@ function DenseAppBar(props) {
                     id="search-location"
                     label="Location"
                     onKeyPress={e => {
+                      e.stopPropagation();
                       if (e.which === 13) {
-                        addPlaceWithMarker(e);
+                        return addPlaceWithMarker(e);
                       }
                     }}
                     className={classes.textField}
@@ -328,7 +373,7 @@ function DenseAppBar(props) {
               Add place
             </Button>
             <Divider />
-            <Typography variant="h5" component="h3">
+            <Typography variant="h6" component="h4">
               {currentMarker.title}
             </Typography>
 

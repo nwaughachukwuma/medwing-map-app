@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { withStyles } from "@material-ui/core/styles";
 import AppBar from "@material-ui/core/AppBar";
@@ -16,7 +16,8 @@ import {
   LoadScript,
   MarkerClusterer,
   Marker,
-  OverlayView
+  OverlayView,
+  InfoWindow
 } from "@react-google-maps/api";
 import "./App.css";
 import { API_KEY } from "./utils/config";
@@ -31,7 +32,9 @@ function DenseAppBar(props) {
   const [markerName, setMarkerName] = useState("");
   const [addPlace, setAddPlace] = useState(false);
   const [query, setQuery] = useState("");
+  const [coords, setCoords] = useState({});
   const [location, setLocation] = useState({});
+  const [infoWindow, setInfoWindow] = useState(undefined);
   let searchBox = null;
 
   const toggleDrawer = open => {
@@ -43,16 +46,65 @@ function DenseAppBar(props) {
   };
 
   const handleChange = item => val => {
+    console.log(item);
     switch (item) {
       case "marker_name":
         setMarkerName(val.target.value);
+        break;
+      case "location":
+        setQuery(val.target.value);
         break;
       default:
         break;
     }
   };
 
+  useEffect(() => {
+    // use browser navigator object to get user's current location
+    navigator.geolocation.getCurrentPosition(
+      async position => {
+        const { latitude, longitude } = position.coords;
+        if (!latitude && !longitude) {
+          // if browser navigation does not return accurate location info.
+          // use a third party solution to get an approximate location
+          fetch("https://ipapi.co/json/")
+            .then(response => response.json())
+            .then(responseJson => {
+              setCoords({
+                ...coords,
+                ...responseJson
+              });
+            })
+            .catch(error => Promise.reject(error));
+        } else {
+          setCoords(position.coords);
+        }
+      },
+      () => {
+        // navigator error: not supported or something went wrong
+        fetch("https://ipapi.co/json/")
+          .then(response => response.json())
+          .then(responseJson => {
+            setCoords({
+              ...coords,
+              ...responseJson
+            });
+          })
+          .catch(_ =>
+            alert("GPS service down!, Cannot get your location at this time")
+          );
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const computeGeoCoord = async () => {
+    console.log(query);
+    if (query.length < 3) {
+      alert("Enter a valid location");
+      return;
+    }
     const new_query = query.replace(/\s/g, "+");
     try {
       await fetch(
@@ -74,6 +126,11 @@ function DenseAppBar(props) {
           alert("Location Error! Returned with a message: " + rejected)
       );
     }
+  };
+
+  const addPlaceWithMarker = e => {
+    e.preventDefault();
+    computeGeoCoord();
   };
 
   return (
@@ -105,10 +162,10 @@ function DenseAppBar(props) {
           <LoadScript id="script-loader" googleMapsApiKey={API_KEY}>
             <GoogleMap
               id="circle-example"
-              onLoad={map => {
-                const bounds = new window.google.maps.LatLngBounds();
-                map.fitBounds(bounds);
-              }}
+              // onLoad={map => {
+              //   const bounds = new window.google.maps.LatLngBounds();
+              //   map.fitBounds(bounds);
+              // }}
               onUnmount={map => {
                 // do your stuff before map is unmounted
               }}
@@ -119,42 +176,17 @@ function DenseAppBar(props) {
               }}
               clickableIcons={true}
               onClick={e => {
-                console.log("map clicked:", e);
+                // console.log("map clicked:", e, coords);
               }}
-              onDragEnd={e => {
-                console.log("map dragged", e);
+              onDragEnd={() => {
+                console.log("map dragged");
               }}
               zoom={7}
               center={{
-                lat: 9.076,
-                lng: 7.398
+                lat: parseFloat(coords.latitude),
+                lng: parseFloat(coords.longitude)
               }}
             >
-              <OverlayView
-                position={{
-                  lat: 35.772,
-                  lng: -120.214
-                }}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <div
-                  style={{
-                    background: `white`,
-                    border: `1px solid #ccc`,
-                    padding: 15
-                  }}
-                >
-                  <h1>OverlayView</h1>
-                  <button
-                    onClick={() => {
-                      console.info("I have been clicked!");
-                    }}
-                    type="button"
-                  >
-                    Click me
-                  </button>
-                </div>
-              </OverlayView>
               <MarkerClusterer
                 options={{
                   imagePath:
@@ -180,6 +212,52 @@ function DenseAppBar(props) {
                 }
               </MarkerClusterer>
             </GoogleMap>
+
+            {addPlace ? (
+              <div
+                style={{
+                  background: `white`,
+                  border: `1px solid #ccc`,
+                  padding: 15
+                }}
+                className="overlay-component"
+              >
+                <span className="overlay-header">
+                  <h3>Add location</h3>
+                  <button
+                    onClick={toggleAddPlace}
+                    type="button"
+                    className="overlay-header-button"
+                  >
+                    X
+                  </button>
+                </span>
+                <form onSubmit={addPlaceWithMarker}>
+                  <TextField
+                    id="search-location"
+                    label="Location"
+                    className={classes.textField}
+                    value={query}
+                    helperText="enter a valid address"
+                    onChange={handleChange("location")}
+                    margin="normal"
+                    variant="outlined"
+                  />
+                  <br />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    type="submit"
+                    className={classes.addButton}
+                    // onClick={addPlaceWithMarker}
+                  >
+                    Add
+                  </Button>
+                </form>
+              </div>
+            ) : (
+              <div />
+            )}
           </LoadScript>
         </div>
         <div className="map-editor-container">
@@ -192,34 +270,6 @@ function DenseAppBar(props) {
             >
               Add place
             </Button>
-            <div
-              className={`${
-                addPlace ? "show-add-new-marker" : "hide-add-new-marker"
-              }`}
-            >
-              <Divider />
-              <Typography component="p">Add a new place to the map</Typography>
-              <form>
-                <TextField
-                  id="add-marker-name"
-                  label="Marker name"
-                  className={classes.textField}
-                  value={markerName}
-                  helperText="enter a valid location"
-                  onChange={handleChange("marker_name")}
-                  margin="normal"
-                  variant="outlined"
-                />
-                <br />
-                <Button
-                  variant="contained"
-                  color="primary"
-                  className={classes.addButton}
-                >
-                  Add
-                </Button>
-              </form>
-            </div>
             <Divider />
             <Typography variant="h5" component="h3">
               Marker title

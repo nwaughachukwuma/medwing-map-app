@@ -15,13 +15,11 @@ import {
   GoogleMap,
   LoadScript,
   MarkerClusterer,
-  Marker,
-  OverlayView,
-  InfoWindow
+  Marker
 } from "@react-google-maps/api";
 import "./App.css";
 import { API_KEY } from "./utils/config";
-import { dummyLatLng } from "./utils/mock";
+import { latLng } from "./utils/mock";
 import { SideList } from "./utils/navigation";
 import { styles } from "./plugins/material-ui/styles";
 
@@ -34,7 +32,6 @@ function DenseAppBar(props) {
   const [query, setQuery] = useState("");
   const [coords, setCoords] = useState({});
   const [location, setLocation] = useState({});
-  const [infoWindow, setInfoWindow] = useState(undefined);
   let searchBox = null;
 
   const toggleDrawer = open => {
@@ -46,7 +43,6 @@ function DenseAppBar(props) {
   };
 
   const handleChange = item => val => {
-    console.log(item);
     switch (item) {
       case "marker_name":
         setMarkerName(val.target.value);
@@ -69,68 +65,66 @@ function DenseAppBar(props) {
           // use a third party solution to get an approximate location
           fetch("https://ipapi.co/json/")
             .then(response => response.json())
-            .then(responseJson => {
+            .then(responseJson =>
               setCoords({
                 ...coords,
                 ...responseJson
-              });
-            })
+              })
+            )
             .catch(error => Promise.reject(error));
         } else {
-          setCoords(position.coords);
+          return setCoords(position.coords);
         }
       },
       () => {
         // navigator error: not supported or something went wrong
         fetch("https://ipapi.co/json/")
           .then(response => response.json())
-          .then(responseJson => {
+          .then(responseJson =>
             setCoords({
               ...coords,
               ...responseJson
-            });
-          })
+            })
+          )
           .catch(_ =>
             alert("GPS service down!, Cannot get your location at this time")
           );
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
     );
+    // update location
+    if (Object.keys(location).length) {
+      latLng.push(location);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location]);
 
   const computeGeoCoord = async () => {
-    console.log(query);
     if (query.length < 3) {
       alert("Enter a valid location");
-      return;
+      return null;
     }
     const new_query = query.replace(/\s/g, "+");
     try {
-      await fetch(
+      return await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${new_query}&key=${API_KEY}`
       )
         .then(response => response.json())
         .then(responseJson => {
           const { location } = responseJson.results[0].geometry;
           setLocation(location);
-          console.log("new location: ", location);
+          return location;
         })
-        .catch(error => {
-          Promise.reject("ERROR FETCHING LOCATION with error: " + error);
-        });
+        // throw new Error(error);
+        .catch(error => Promise.reject(error));
     } catch (error) {
-      Promise.reject(error).then(
-        resolved => resolved,
-        rejected =>
-          alert("Location Error! Returned with a message: " + rejected)
-      );
+      console.log(error.message);
     }
   };
 
-  const addPlaceWithMarker = e => {
+  const addPlaceWithMarker = async e => {
     e.preventDefault();
-    computeGeoCoord();
+    await computeGeoCoord();
   };
 
   return (
@@ -194,7 +188,7 @@ function DenseAppBar(props) {
                 }}
               >
                 {clusterer =>
-                  dummyLatLng.map((location, i) => (
+                  latLng.map((location, i) => (
                     <Marker
                       clickable={true}
                       title="marker title"
@@ -236,6 +230,11 @@ function DenseAppBar(props) {
                   <TextField
                     id="search-location"
                     label="Location"
+                    onKeyPress={e => {
+                      if (e.which === 13) {
+                        addPlaceWithMarker(e);
+                      }
+                    }}
                     className={classes.textField}
                     value={query}
                     helperText="enter a valid address"

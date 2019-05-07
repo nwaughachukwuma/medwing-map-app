@@ -2,7 +2,6 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import { withStyles } from "@material-ui/core/styles";
 import AppBar from "@material-ui/core/AppBar";
-import Drawer from "@material-ui/core/Drawer";
 import Toolbar from "@material-ui/core/Toolbar";
 import Divider from "@material-ui/core/Divider";
 import Paper from "@material-ui/core/Paper";
@@ -10,7 +9,7 @@ import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
-import MenuIcon from "@material-ui/icons/Menu";
+import MenuIcon from "@material-ui/icons/Place";
 import {
   GoogleMap,
   LoadScript,
@@ -21,7 +20,6 @@ import {
 } from "@react-google-maps/api";
 import "./App.css";
 import { API_KEY } from "./utils/config";
-import { SideList } from "./utils/navigation";
 import { styles } from "./plugins/material-ui/styles";
 import Swal from "sweetalert2";
 import {
@@ -43,7 +41,6 @@ export class MapHome extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      drawer: false,
       mapZoom: 8,
       markerName: "",
       addPlace: false,
@@ -60,8 +57,6 @@ export class MapHome extends Component {
     };
   }
 
-  toggleDrawer = open =>
-    this.setState(prevState => ({ drawer: !prevState.drawer }));
   toggleAddPlace = () =>
     this.setState(prevState => ({ addPlace: !prevState.addPlace }));
   handleChange = item => val => {
@@ -233,8 +228,17 @@ export class MapHome extends Component {
       });
       return;
     }
+
     let places = Object.assign([], this.state.places);
     const deletePlace = places.slice(index, index + 1);
+    if (!deletePlace[0]) {
+      Swal.fire({
+        type: "warning",
+        title: "Oops!",
+        text: "Click on a place before deleting..."
+      });
+      return;
+    }
     places.splice(index, 1);
     // delete on the serve
     await deleteLocation(deletePlace[0].id).then(response => {
@@ -253,19 +257,19 @@ export class MapHome extends Component {
     const {
       addPlace,
       query,
-      drawer,
       coords,
       currentMarker,
       places,
       markerName,
       mapZoom
     } = this.state;
+
     return (
       <div className={classes.root}>
         <AppBar position="static">
           <Toolbar variant="dense">
             <IconButton
-              onClick={this.toggleDrawer}
+              // onClick={this.toggleDrawer}
               className={classes.menuButton}
               color="inherit"
               aria-label="Menu"
@@ -277,15 +281,6 @@ export class MapHome extends Component {
             </Typography>
           </Toolbar>
         </AppBar>
-        <Drawer
-          anchor="left"
-          open={drawer}
-          onClose={() => this.setState({ drawer: false })}
-        >
-          <div tabIndex={0} role="button">
-            <SideList classes={classes} />
-          </div>
-        </Drawer>
 
         <div className="map-row">
           <div className="map-container">
@@ -311,12 +306,12 @@ export class MapHome extends Component {
                 clickableIcons={true}
                 onClick={e => {
                   // console.log("map clicked:", e, coords);
-                  this.setState(prevState => ({
+                  this.setState({
                     coords: {
                       ...coords,
                       ...currentMarker
                     }
-                  }));
+                  });
                 }}
                 onDragEnd={() => {
                   console.log("map dragged");
@@ -327,29 +322,6 @@ export class MapHome extends Component {
                   lng: parseFloat(coords.longitude)
                 }}
               >
-                <OverlayView
-                  position={{
-                    lat: parseFloat(currentMarker.lat) + delta,
-                    lng: parseFloat(currentMarker.lng) + delta / viewportheight
-                  }}
-                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                >
-                  <div
-                    style={{
-                      background: `white`,
-                      border: `1px solid #ccc`,
-                      padding: 15,
-                      marginLeft: 10,
-                      marginTop: 20
-                    }}
-                  >
-                    <Typography component="p">
-                      {currentMarker.lat
-                        ? currentMarker.title
-                        : "click on a marker"}
-                    </Typography>
-                  </div>
-                </OverlayView>
                 <Polygon
                   onLoad={polygon => {
                     // console.log("polygon: ", polygon);
@@ -375,6 +347,7 @@ export class MapHome extends Component {
                   options={this.polygonOptions}
                 />
                 <MarkerClusterer
+                  gridSize={10}
                   options={{
                     imagePath:
                       "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m"

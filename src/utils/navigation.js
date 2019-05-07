@@ -10,7 +10,7 @@ import MailIcon from "@material-ui/icons/Mail";
 export const SideList = ({ classes }) => (
   <div className={classes.list}>
     <List>
-      {["Inbox", "Starred", "Send email", "Drafts"].map((text, index) => (
+      {["Inbox", "Send email"].map((text, index) => (
         <ListItem button key={text}>
           <ListItemIcon>
             {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
@@ -21,7 +21,7 @@ export const SideList = ({ classes }) => (
     </List>
     <Divider />
     <List>
-      {["All mail", "Trash", "Spam"].map((text, index) => (
+      {["Trash", "Spam"].map((text, index) => (
         <ListItem button key={text}>
           <ListItemIcon>
             {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}

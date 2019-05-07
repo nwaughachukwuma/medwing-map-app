@@ -5,9 +5,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=node",
     "eject": "react-scripts eject",
-    "test:jest": "jest -u",
+    "test": "jest -u",
     "test:coverage": "jest -u --coverage --colors"
   },
   "dependencies": {

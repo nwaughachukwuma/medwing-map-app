@@ -1,4 +1,14 @@
+# Medwing Maps App
+`A react implementation of the technical exercise by Medwing`
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Design Decision
+- This project uses Material-ui framework which provides the layout and consistent components used through out the App
+- The project also uses a React google-maps wrapper library which provides all the helper components and methods to quickly build out the App
+- Attempt is made to keep the design simple and similar to the map-ui on the google-maps developer/docs page
+- Google Maps API is the primary API needed for the maps and place finder. A third party API, https://Ipapi.co, is used only when the browser doesn't support navigator object. Another third party API can be used to replace this without any challenge.
+- The App is easy to use as it bears a similar resemblance in feature and behavior to the google maps found [here](https://developers.google.com/maps/documentation/geocoding/intro)
+- The use of marker clusterer is one thing I find interesting, as it makes visualizing a group of markers from a small zoom camera angle, easy.
 
 ## Available Scripts
 
@@ -37,32 +47,6 @@ Instead, it will copy all the configuration files and the transitive dependencie
 
 You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
 
-## Learn More
+## Author
+* **Chukwuma Nwaugha** - [Github](https://github.com/nwaughachukwuma)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
-
-### Analyzing the Bundle Size
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
-
-### Making a Progressive Web App
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `npm run build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify

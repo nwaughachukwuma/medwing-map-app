@@ -30,7 +30,7 @@ import {
 } from "./utils/api";
 import { searchQuery } from "./utils/helper";
 
-const delta = 0.0922;
+const delta = 0.0522;
 let viewportheight = 1024;
 if (typeof window.innerWidth !== "undefined") {
   // viewportwidth = window.innerWidth;
@@ -56,21 +56,6 @@ export class MapHome extends Component {
       places: []
     };
   }
-
-  toggleAddPlace = () =>
-    this.setState(prevState => ({ addPlace: !prevState.addPlace }));
-  handleChange = item => val => {
-    switch (item) {
-      case "marker_name":
-        this.setState({ markerName: val.target.value });
-        break;
-      case "location":
-        this.setState({ query: val.target.value });
-        break;
-      default:
-        break;
-    }
-  };
 
   polygonOptions = {
     fillColor: "tranparent",
@@ -145,28 +130,51 @@ export class MapHome extends Component {
     }
   }
 
+  toggleAddPlace = () =>
+    this.setState(prevState => ({ addPlace: !prevState.addPlace }));
+
+  handleChange = item => val => {
+    switch (item) {
+      case "marker_name":
+        this.setState({ markerName: val.target.value });
+        break;
+      case "location":
+        this.setState({ query: val.target.value });
+        break;
+      default:
+        break;
+    }
+  };
+
   addPlaceWithMarker = async e => {
     e.preventDefault();
     searchQuery(this.state.query).then(async result => {
       // save on the server
-      await storeLocation(result).then(response => {
-        const newMarkerPoint = response.success.marker;
-        this.setState(prevState => ({
-          coords: {
-            ...prevState.coords,
-            ...{ lat: newMarkerPoint.lat, lng: newMarkerPoint.lng }
-          },
-          places: [...prevState.places, newMarkerPoint]
-        }));
-      });
-      this.setState(prevState => ({
-        currentMarker: {
-          ...result,
-          index: prevState.places.length
-        },
-        query: "",
-        mapZoom: prevState.mapZoom > 10 ? 10 : prevState.mapZoom + 3
-      }));
+      await storeLocation(result)
+        .then(response => {
+          const newMarkerPoint = response.success.marker;
+          this.setState(prevState => ({
+            coords: {
+              ...prevState.coords,
+              latitude: newMarkerPoint.lat,
+              longitude: newMarkerPoint.lng
+            },
+            places: [...prevState.places, newMarkerPoint],
+            currentMarker: {
+              ...result,
+              index: prevState.places.length
+            },
+            query: "",
+            mapZoom: 12
+          }));
+        })
+        .catch(_ =>
+          Swal.fire({
+            type: "error",
+            title: "Error Saving location",
+            text: "Something went wrong. Try adding a new location"
+          })
+        );
     });
   };
 
@@ -198,21 +206,28 @@ export class MapHome extends Component {
     await this.setState({ query: markerName, places: places, addPlace: false });
     searchQuery(this.state.query).then(async result => {
       // update on the server
-      await editLocation(editPlace[0].id, result).then(response => {
-        const newMarkerPoint = response.success.marker;
-        this.setState(prevState => ({
-          coords: {
-            ...prevState.coords,
-            ...{ lat: newMarkerPoint.lat, lng: newMarkerPoint.lng }
-          },
-          places: [...prevState.places, newMarkerPoint]
-        }));
-      });
-      this.setState({
-        currentMarker: { ...result, index: index },
-        query: "",
-        markerName: ""
-      });
+      await editLocation(editPlace[0].id, result)
+        .then(response => {
+          const newMarkerPoint = response.success.marker;
+          this.setState(prevState => ({
+            coords: {
+              ...prevState.coords,
+              latitude: newMarkerPoint.lat,
+              longitude: newMarkerPoint.lng
+            },
+            places: [...prevState.places, newMarkerPoint],
+            currentMarker: { ...result, index: index },
+            query: "",
+            markerName: ""
+          }));
+        })
+        .catch(_ =>
+          Swal.fire({
+            type: "error",
+            title: "Error updating location",
+            text: "Something went wrong."
+          })
+        );
     });
   };
 
@@ -241,15 +256,23 @@ export class MapHome extends Component {
     }
     places.splice(index, 1);
     // delete on the serve
-    await deleteLocation(deletePlace[0].id).then(response => {
-      this.setState({
-        currentMarker: {
-          ...places[places.length ? places.length - 1 : 0],
-          index: places.length ? places.length - 1 : 0
-        },
-        places: [...response.success.markers]
-      });
-    });
+    await deleteLocation(deletePlace[0].id)
+      .then(response => {
+        this.setState({
+          currentMarker: {
+            ...places[places.length ? places.length - 1 : 0],
+            index: places.length ? places.length - 1 : 0
+          },
+          places: [...response.success.markers]
+        });
+      })
+      .catch(_ =>
+        Swal.fire({
+          type: "error",
+          title: "Error deleting location",
+          text: "Something went wrong."
+        })
+      );
   };
 
   render() {
@@ -304,17 +327,8 @@ export class MapHome extends Component {
                   console.log("zoom changed");
                 }}
                 clickableIcons={true}
-                onClick={e => {
-                  // console.log("map clicked:", e, coords);
-                  this.setState({
-                    coords: {
-                      ...coords,
-                      ...currentMarker
-                    }
-                  });
-                }}
                 onDragEnd={() => {
-                  console.log("map dragged");
+                  // console.log("map dragged");
                 }}
                 zoom={mapZoom}
                 center={{
@@ -322,6 +336,29 @@ export class MapHome extends Component {
                   lng: parseFloat(coords.longitude)
                 }}
               >
+                <OverlayView
+                  position={{
+                    lat: parseFloat(currentMarker.lat) + delta,
+                    lng: parseFloat(currentMarker.lng) - delta / viewportheight
+                  }}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <div
+                    style={{
+                      background: `white`,
+                      border: `1px solid #ccc`,
+                      padding: 15,
+                      marginLeft: 10,
+                      marginTop: 20
+                    }}
+                  >
+                    <Typography component="p">
+                      {currentMarker.lat
+                        ? currentMarker.title
+                        : "click on a marker"}
+                    </Typography>
+                  </div>
+                </OverlayView>
                 <Polygon
                   onLoad={polygon => {
                     // console.log("polygon: ", polygon);
@@ -361,7 +398,8 @@ export class MapHome extends Component {
                           this.setState({
                             coords: {
                               ...coords,
-                              ...places[i]
+                              latitude: places[i].lat,
+                              longitude: places[i].lng
                             },
                             currentMarker: {
                               ...places[i],

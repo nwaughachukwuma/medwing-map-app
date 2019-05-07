@@ -21,11 +21,15 @@ import {
 } from "@react-google-maps/api";
 import "./App.css";
 import { API_KEY } from "./utils/config";
-import { latLng } from "./utils/mock";
 import { SideList } from "./utils/navigation";
 import { styles } from "./plugins/material-ui/styles";
 import Swal from "sweetalert2";
-import fetchConfig from "./utils/api";
+import fetchConfig, {
+  fetchDataFromServer,
+  storeLocation,
+  editLocation,
+  deleteLocation
+} from "./utils/api";
 
 const delta = 0.0922;
 let viewportheight = 1024;
@@ -51,7 +55,7 @@ export class MapHome extends Component {
         title: "Marker title",
         index: null
       },
-      places: latLng
+      places: []
     };
   }
 
@@ -85,30 +89,16 @@ export class MapHome extends Component {
     zIndex: 1
   };
 
-  componentDidMount() {
-    this.fetchDataFromServer();
+  componentDidMount = async () => {
+    fetchDataFromServer().then(result =>
+      this.setState(prevState => ({
+        places: [...prevState.places, ...result.markers]
+      }))
+    );
     this.initLocation();
-  }
-
-  fetchDataFromServer = () => {
-    fetch("http://localhost:8000/api/markers", fetchConfig)
-      .then(response => response.json())
-      .then(result => {
-        this.setState(prevState => ({
-          places: [...prevState.places, ...result.markers]
-        }));
-      })
-      .catch(error => {
-        console.log(error.response);
-        Swal.fire({
-          type: "error",
-          title: "Something went wrong!",
-          text: "Cannot connect to the server at this point"
-        });
-      });
   };
 
-  initLocation = () => {
+  initLocation = async () => {
     // use browser navigator object to get user's current location
     navigator.geolocation.getCurrentPosition(
       async position => {
@@ -198,33 +188,9 @@ export class MapHome extends Component {
   addPlaceWithMarker = async e => {
     e.preventDefault();
     this.computeGeoCoord().then(async result => {
-      await this.saveLocation("POST", result);
-      this.setState(prevState => ({
-        currentMarker: {
-          ...result,
-          index: prevState.places.length
-        },
-        query: ""
-      }));
-      this.setState(prevState => ({
-        mapZoom: prevState.mapZoom > 10 ? 10 : prevState.mapZoom + 3
-      }));
-    });
-  };
-
-  saveLocation = async (data = {}) => {
-    // save on the server...
-    fetch("http://localhost:8000/api/marker", {
-      ...fetchConfig,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
-    })
-      .then(response => response.json())
-      .then(result => {
-        const newMarkerPoint = result.success.marker;
+      // save on the server
+      await storeLocation(result).then(response => {
+        const newMarkerPoint = response.success.marker;
         this.setState(prevState => ({
           coords: {
             ...prevState.coords,
@@ -232,16 +198,16 @@ export class MapHome extends Component {
           },
           places: [...prevState.places, newMarkerPoint]
         }));
-        return newMarkerPoint;
-      })
-      .catch(error => {
-        console.log(error.response);
-        Swal.fire({
-          type: "error",
-          title: "Something went wrong!",
-          text: "Cannot connect to the server at this point"
-        });
       });
+      this.setState(prevState => ({
+        currentMarker: {
+          ...result,
+          index: prevState.places.length
+        },
+        query: "",
+        mapZoom: prevState.mapZoom > 10 ? 10 : prevState.mapZoom + 3
+      }));
+    });
   };
 
   editPlaceWithMarker = async e => {
@@ -271,28 +237,9 @@ export class MapHome extends Component {
     places.splice(index, 1);
     await this.setState({ query: markerName, places: places, addPlace: false });
     this.computeGeoCoord().then(async result => {
-      await this.editLocation(editPlace[0].id, result);
-      this.setState({
-        currentMarker: { ...result, index: index },
-        query: "",
-        markerName: ""
-      });
-    });
-  };
-
-  editLocation = (id, data = {}) => {
-    // edit location on the server...
-    fetch(`http://localhost:8000/api/marker/${id}`, {
-      ...fetchConfig,
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8"
-      },
-      body: JSON.stringify(data)
-    })
-      .then(response => response.json())
-      .then(result => {
-        const newMarkerPoint = result.success.marker;
+      // update on the server
+      await editLocation(editPlace[0].id, result).then(response => {
+        const newMarkerPoint = response.success.marker;
         this.setState(prevState => ({
           coords: {
             ...prevState.coords,
@@ -300,16 +247,13 @@ export class MapHome extends Component {
           },
           places: [...prevState.places, newMarkerPoint]
         }));
-        return newMarkerPoint;
-      })
-      .catch(error => {
-        console.log(error.response);
-        Swal.fire({
-          type: "error",
-          title: "Something went wrong!",
-          text: "Cannot connect to the server at this point"
-        });
       });
+      this.setState({
+        currentMarker: { ...result, index: index },
+        query: "",
+        markerName: ""
+      });
+    });
   };
 
   deletePlaceWithMarker = async e => {
@@ -327,29 +271,16 @@ export class MapHome extends Component {
     let places = Object.assign([], this.state.places);
     const deletePlace = places.slice(index, index + 1);
     places.splice(index, 1);
-    // delete location on the server...
-    fetch(`http://localhost:8000/api/marker/${deletePlace[0].id}`, {
-      ...fetchConfig,
-      method: "DELETE"
-    })
-      .then(response => response.json())
-      .then(result => {
-        this.setState({
-          currentMarker: {
-            ...places[places.length ? places.length - 1 : 0],
-            index: places.length ? places.length - 1 : 0
-          },
-          places: [...result.success.markers]
-        });
-      })
-      .catch(error => {
-        console.log(error.response);
-        Swal.fire({
-          type: "error",
-          title: "Something went wrong!",
-          text: "Cannot connect to the server at this point"
-        });
+    // delete on the serve
+    await deleteLocation(deletePlace[0].id).then(response => {
+      this.setState({
+        currentMarker: {
+          ...places[places.length ? places.length - 1 : 0],
+          index: places.length ? places.length - 1 : 0
+        },
+        places: [...response.success.markers]
       });
+    });
   };
 
   render() {

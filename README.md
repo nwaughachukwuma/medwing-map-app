@@ -10,6 +10,18 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 - The App is easy to use as it bears a similar resemblance in feature and behavior to the google maps found [here](https://developers.google.com/maps/documentation/geocoding/intro)
 - The use of marker clusterer is one thing I find interesting, as it makes visualizing a group of markers from a small zoom camera angle, easy.
 
+## How to install
+- Setup or clone the repository [here](https://github.com/nwaughachukwuma/medwing-map-app.git)
+  > if using the zip package, unzip into any directory of your choice
+- Run yarn/npm install
+  > The project is integrated with husky and pretty quick for cleaning up and testing pre-commits and pre-push events.
+- Enter your Google maps API key.
+  > I have added a Google Maps API key so you can explore the App. You can replace it with yours.
+- Ensure that the server is running as the App will hit the server address on `http://localhost:8000`
+- Start the App
+  > with yarn/npm start
+- Read on for other options
+
 ## Available Scripts
 
 In the project directory, you can run:

@@ -24,12 +24,13 @@ import { API_KEY } from "./utils/config";
 import { SideList } from "./utils/navigation";
 import { styles } from "./plugins/material-ui/styles";
 import Swal from "sweetalert2";
-import fetchConfig, {
+import {
   fetchDataFromServer,
   storeLocation,
   editLocation,
   deleteLocation
 } from "./utils/api";
+import { searchQuery } from "./utils/helper";
 
 const delta = 0.0922;
 let viewportheight = 1024;
@@ -149,45 +150,9 @@ export class MapHome extends Component {
     }
   }
 
-  computeGeoCoord = async (method = "POST") => {
-    const { query } = this.state;
-    if (query.length < 3) {
-      Swal.fire({
-        type: "warning",
-        title: "Oops!",
-        text: "Enter a valid location..."
-      });
-      return null;
-    }
-    const new_query = query.replace(/\s/g, "+");
-    try {
-      return await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${new_query}&key=${API_KEY}`
-      )
-        .then(response => response.json())
-        .then(responseJson => {
-          const {
-            formatted_address,
-            geometry: { location }
-          } = responseJson.results[0];
-          const markerPoint = { ...location, title: formatted_address };
-          return markerPoint;
-        })
-        // throw new Error(error);
-        .catch(error => Promise.reject(error));
-    } catch (error) {
-      Swal.fire({
-        type: "warning",
-        title: "Oops!",
-        text:
-          "Status: The request did not encounter any error but returned no result"
-      });
-    }
-  };
-
   addPlaceWithMarker = async e => {
     e.preventDefault();
-    this.computeGeoCoord().then(async result => {
+    searchQuery(this.state.query).then(async result => {
       // save on the server
       await storeLocation(result).then(response => {
         const newMarkerPoint = response.success.marker;
@@ -236,7 +201,7 @@ export class MapHome extends Component {
     const editPlace = places.slice(index, index + 1);
     places.splice(index, 1);
     await this.setState({ query: markerName, places: places, addPlace: false });
-    this.computeGeoCoord().then(async result => {
+    searchQuery(this.state.query).then(async result => {
       // update on the server
       await editLocation(editPlace[0].id, result).then(response => {
         const newMarkerPoint = response.success.marker;

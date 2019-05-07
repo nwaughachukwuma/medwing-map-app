@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders without crashing 1`] = `
+<MapHome
+  classes={
+    Object {
+      "addButton": "MapHome-addButton-5",
+      "button": "MapHome-button-4",
+      "menuButton": "MapHome-menuButton-2",
+      "root": "MapHome-root-1",
+      "textField": "MapHome-textField-3",
+    }
+  }
+/>
+`;

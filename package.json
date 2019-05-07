@@ -5,8 +5,10 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "test": "react-scripts test --env=node",
+    "eject": "react-scripts eject",
+    "test:jest": "jest -u",
+    "test:coverage": "jest --coverage --colors"
   },
   "dependencies": {
     "@material-ui/core": "^3.9.3",
@@ -20,7 +22,17 @@
     "sweetalert2": "^8.10.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.4.4",
+    "@babel/plugin-proposal-class-properties": "^7.1.0",
+    "@babel/plugin-transform-runtime": "^7.4.4",
+    "@babel/polyfill": "^7.4.4",
+    "@babel/preset-env": "^7.4.4",
+    "@babel/preset-react": "^7.0.0",
     "babel-eslint": "^10.0.1",
+    "babel-jest": "^24.8.0",
+    "enzyme": "^3.9.0",
+    "enzyme-adapter-react-16": "^1.12.1",
+    "enzyme-to-json": "^3.3.5",
     "eslint": "^5.16.0",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-prettier": "^4.2.0",
@@ -29,9 +41,12 @@
     "eslint-plugin-react": "^7.12.4",
     "eslint-plugin-react-hooks": "^1.6.0",
     "husky": "^2.1.0",
+    "jest": "^24.8.0",
+    "jest-simple-summary": "^1.0.1",
     "lint-staged": "^8.1.5",
     "prettier": "^1.17.0",
-    "pretty-quick": "^1.10.0"
+    "pretty-quick": "^1.10.0",
+    "react-test-renderer": "^16.8.6"
   },
   "husky": {
     "hooks": {
@@ -48,6 +63,65 @@
   },
   "eslintConfig": {
     "extends": "react-app"
+  },
+  "jest": {
+    "preset": null,
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageThreshold": {
+      "global": {
+        "branches": 90,
+        "functions": 90,
+        "lines": 90,
+        "statements": 90
+      }
+    },
+    "verbose": true,
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    },
+    "moduleDirectories": [
+      "node_modules",
+      "src"
+    ],
+    "testEnvironment": "node",
+    "modulePaths": [
+      "<rootDir>/src",
+      "<rootDir>/node_modules"
+    ],
+    "moduleNameMapper": {
+      "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/src/__mocks__/fileMock.js",
+      "\\.(css|less)$": "<rootDir>/src/__mocks__/styleMock.js"
+    },
+    "globals": {
+      "NODE_ENV": "test",
+      "window": true
+    },
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "jsx",
+      "ts",
+      "tsx",
+      "node"
+    ],
+    "reporters": [
+      "default",
+      "jest-simple-summary"
+    ],
+    "automock": false,
+    "setupFiles": [
+      "<rootDir>/src/setupTests.js"
+    ],
+    "testPathIgnorePatterns": [
+      "\\\\node_modules\\\\"
+    ],
+    "transformIgnorePatterns": [
+      "<rootDir>/node_modules/"
+    ],
+    "snapshotSerializers": [
+      "enzyme-to-json/serializer"
+    ]
   },
   "browserslist": {
     "production": [

@@ -16,7 +16,8 @@ import {
   LoadScript,
   MarkerClusterer,
   Marker,
-  OverlayView
+  OverlayView,
+  Polygon
 } from "@react-google-maps/api";
 import "./App.css";
 import { API_KEY } from "./utils/config";
@@ -24,6 +25,7 @@ import { latLng } from "./utils/mock";
 import { SideList } from "./utils/navigation";
 import { styles } from "./plugins/material-ui/styles";
 import Swal from "sweetalert2";
+import fetchConfig from "./utils/api";
 
 const delta = 0.0922;
 let viewportheight = 1024;
@@ -37,6 +39,7 @@ export class MapHome extends Component {
     super(props);
     this.state = {
       drawer: false,
+      mapZoom: 8,
       markerName: "",
       addPlace: false,
       query: "",
@@ -69,9 +72,41 @@ export class MapHome extends Component {
     }
   };
 
+  polygonOptions = {
+    fillColor: "tranparent",
+    fillOpacity: 0.1,
+    strokeColor: "red",
+    strokeOpacity: 1,
+    strokeWeight: 2,
+    clickable: false,
+    draggable: false,
+    editable: false,
+    geodesic: false,
+    zIndex: 1
+  };
+
   componentDidMount() {
+    this.fetchDataFromServer();
     this.initLocation();
   }
+
+  fetchDataFromServer = () => {
+    fetch("http://localhost:8000/api/markers", fetchConfig)
+      .then(response => response.json())
+      .then(result => {
+        this.setState(prevState => ({
+          places: [...prevState.places, ...result.markers]
+        }));
+      })
+      .catch(error => {
+        console.log(error.response);
+        Swal.fire({
+          type: "error",
+          title: "Something went wrong!",
+          text: "Cannot connect to the server at this point"
+        });
+      });
+  };
 
   initLocation = () => {
     // use browser navigator object to get user's current location
@@ -124,7 +159,7 @@ export class MapHome extends Component {
     }
   }
 
-  computeGeoCoord = async () => {
+  computeGeoCoord = async (method = "POST") => {
     const { query } = this.state;
     if (query.length < 3) {
       Swal.fire({
@@ -146,13 +181,6 @@ export class MapHome extends Component {
             geometry: { location }
           } = responseJson.results[0];
           const markerPoint = { ...location, title: formatted_address };
-          this.setState(prevState => ({
-            coords: {
-              ...prevState.coords,
-              ...location
-            },
-            places: [...prevState.places, markerPoint]
-          }));
           return markerPoint;
         })
         // throw new Error(error);
@@ -167,17 +195,85 @@ export class MapHome extends Component {
     }
   };
 
+  saveLocation = async (data = {}) => {
+    // save on the server...
+    fetch("http://localhost:8000/api/marker", {
+      ...fetchConfig,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    })
+      .then(response => response.json())
+      .then(result => {
+        const newMarkerPoint = result.success.marker;
+        this.setState(prevState => ({
+          coords: {
+            ...prevState.coords,
+            ...{ lat: newMarkerPoint.lat, lng: newMarkerPoint.lng }
+          },
+          places: [...prevState.places, newMarkerPoint]
+        }));
+        return newMarkerPoint;
+      })
+      .catch(error => {
+        console.log(error.response);
+        Swal.fire({
+          type: "error",
+          title: "Something went wrong!",
+          text: "Cannot connect to the server at this point"
+        });
+      });
+  };
+
+  editLocation = (id, data = {}) => {
+    // save on the server...
+    fetch(`http://localhost:8000/api/marker/${id}`, {
+      ...fetchConfig,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify(data)
+    })
+      .then(response => response.json())
+      .then(result => {
+        const newMarkerPoint = result.success.marker;
+        this.setState(prevState => ({
+          coords: {
+            ...prevState.coords,
+            ...{ lat: newMarkerPoint.lat, lng: newMarkerPoint.lng }
+          },
+          places: [...prevState.places, newMarkerPoint]
+        }));
+        return newMarkerPoint;
+      })
+      .catch(error => {
+        console.log(error.response);
+        Swal.fire({
+          type: "error",
+          title: "Something went wrong!",
+          text: "Cannot connect to the server at this point"
+        });
+      });
+  };
+
   addPlaceWithMarker = async e => {
     e.preventDefault();
-    this.computeGeoCoord().then(result =>
+    this.computeGeoCoord().then(async result => {
+      await this.saveLocation("POST", result);
       this.setState(prevState => ({
         currentMarker: {
           ...result,
           index: prevState.places.length
         },
         query: ""
-      }))
-    );
+      }));
+      this.setState(prevState => ({
+        mapZoom: prevState.mapZoom > 10 ? 10 : prevState.mapZoom + 3
+      }));
+    });
   };
 
   editPlaceWithMarker = async e => {
@@ -203,13 +299,17 @@ export class MapHome extends Component {
     }
 
     let places = Object.assign([], this.state.places);
+    const editPlace = places.slice(index, index + 1);
     places.splice(index, 1);
     await this.setState({ query: markerName, places: places, addPlace: false });
-    this.computeGeoCoord().then(result =>
+    this.computeGeoCoord().then(async result => {
+      await this.editLocation(editPlace[0].id, result);
       this.setState({
-        currentMarker: { ...result, index: index }
-      })
-    );
+        currentMarker: { ...result, index: index },
+        query: "",
+        markerName: ""
+      });
+    });
   };
 
   deletePlaceWithMarker = async e => {
@@ -225,7 +325,6 @@ export class MapHome extends Component {
       return;
     }
     let places = Object.assign([], this.state.places);
-    // this.state.places.splice(index, 1);
     places.splice(index, 1);
     this.setState({
       currentMarker: {
@@ -245,7 +344,8 @@ export class MapHome extends Component {
       coords,
       currentMarker,
       places,
-      markerName
+      markerName,
+      mapZoom
     } = this.state;
     return (
       <div className={classes.root}>
@@ -283,6 +383,7 @@ export class MapHome extends Component {
                   // const bounds = new window.google.maps.LatLngBounds();
                   // map.fitBounds(bounds);
                 }}
+                ref={ref => (this.mapRef = ref)}
                 onUnmount={map => {
                   // do your stuff before map is unmounted
                 }}
@@ -290,6 +391,9 @@ export class MapHome extends Component {
                 mapContainerStyle={{
                   height: "550px",
                   width: "100%"
+                }}
+                onZoomChanged={() => {
+                  console.log("zoom changed");
                 }}
                 clickableIcons={true}
                 onClick={e => {
@@ -304,7 +408,7 @@ export class MapHome extends Component {
                 onDragEnd={() => {
                   console.log("map dragged");
                 }}
-                zoom={7}
+                zoom={mapZoom}
                 center={{
                   lat: parseFloat(coords.latitude),
                   lng: parseFloat(coords.longitude)
@@ -333,6 +437,30 @@ export class MapHome extends Component {
                     </Typography>
                   </div>
                 </OverlayView>
+                <Polygon
+                  onLoad={polygon => {
+                    // console.log("polygon: ", polygon);
+                  }}
+                  paths={[
+                    {
+                      lat: currentMarker.lat + 0.05,
+                      lng: currentMarker.lng + 0.05
+                    },
+                    {
+                      lat: currentMarker.lat + 0.05,
+                      lng: currentMarker.lng - 0.05
+                    },
+                    {
+                      lat: currentMarker.lat - 0.05,
+                      lng: currentMarker.lng - 0.05
+                    },
+                    {
+                      lat: currentMarker.lat - 0.05,
+                      lng: currentMarker.lng + 0.05
+                    }
+                  ]}
+                  options={this.polygonOptions}
+                />
                 <MarkerClusterer
                   options={{
                     imagePath:
@@ -356,7 +484,7 @@ export class MapHome extends Component {
                           });
                         }}
                         onLoad={marker => {
-                          // console.log('marker: ', marker)
+                          // console.log(marker)
                         }}
                         // onMouseOver={e => {
                         // }}
@@ -452,10 +580,14 @@ export class MapHome extends Component {
                 <br />
                 <div className="marker-label-section ">
                   <label>Latitude: </label>
-                  <label>{currentMarker.lat && currentMarker.lat}</label>
+                  <label>
+                    {currentMarker.lat && currentMarker.lat.toFixed(6)}
+                  </label>
                   <br />
                   <label>Longitude: </label>
-                  <label>{currentMarker.lng && currentMarker.lng} </label>
+                  <label>
+                    {currentMarker.lng && currentMarker.lng.toFixed(6)}{" "}
+                  </label>
                 </div>
                 <br />
                 <span className="edit-marker-section">

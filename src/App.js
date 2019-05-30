@@ -71,6 +71,13 @@ export class MapHome extends Component {
   };
 
   componentDidMount = async () => {
+    if (API_KEY.length < 38) {
+      Swal.fire({
+        type: "info",
+        title: "Invalid API Key",
+        text: "Enter your API key in the src/utils/config file"
+      });
+    }
     fetchDataFromServer().then(result =>
       this.setState(prevState => ({
         places: [...prevState.places, ...result.markers]
@@ -307,7 +314,13 @@ export class MapHome extends Component {
 
         <div className="map-row">
           <div className="map-container">
-            <LoadScript id="script-loader" googleMapsApiKey={API_KEY}>
+            <LoadScript
+              id="script-loader"
+              googleMapsApiKey={API_KEY}
+              onError={error => {
+                console.log(error);
+              }}
+            >
               <GoogleMap
                 id="map-component"
                 onLoad={map => {

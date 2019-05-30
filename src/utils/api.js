@@ -16,7 +16,7 @@ export const fetchConfig = function() {
 };
 
 export const fetchDataFromServer = () => {
-  return fetch("http://localhost:8000/api/markers", fetchConfig)
+  return fetch("https://medwing-app.herokuapp.com/api/markers", fetchConfig)
     .then(response => response.json())
     .then(result => result)
     .catch(_ =>
@@ -30,7 +30,7 @@ export const fetchDataFromServer = () => {
 
 export const storeLocation = (data = {}) => {
   // save on the server...
-  return fetch("http://localhost:8000/api/marker", {
+  return fetch("https://medwing-app.herokuapp.com/api/marker", {
     ...fetchConfig,
     method: "POST",
     headers: {
@@ -52,7 +52,7 @@ export const storeLocation = (data = {}) => {
 
 export const editLocation = (id, data = {}) => {
   // edit location on the server...
-  return fetch(`http://localhost:8000/api/marker/${id}`, {
+  return fetch(`https://medwing-app.herokuapp.com/api/marker/${id}`, {
     ...fetchConfig,
     method: "PUT",
     headers: {
@@ -74,7 +74,7 @@ export const editLocation = (id, data = {}) => {
 
 export const deleteLocation = id => {
   // delete location on the server...
-  return fetch(`http://localhost:8000/api/marker/${id}`, {
+  return fetch(`https://medwing-app.herokuapp.com/api/marker/${id}`, {
     ...fetchConfig,
     method: "DELETE"
   })
